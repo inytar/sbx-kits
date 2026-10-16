@@ -1,0 +1,31 @@
+schemaVersion: "2"
+kind: mixin
+name: claude-theme-auto
+# Everything this kit writes lands in ~/.claude/settings.json, which only
+# Claude Code reads; on any other base agent the kit is silently inert.
+requires:
+  agent: claude
+displayName: Claude Code Auto Theme
+description: Sets Claude Code's theme to "auto" (match terminal) via the theme key in ~/.claude/settings.json, merging so every other setting is preserved (an existing theme is intentionally replaced, since setting the theme is the point of the kit).
+agentInstructions:
+  content: |
+    ## Theme
+
+    This sandbox's Claude Code theme is pinned to `auto` (match terminal)
+    via the `theme` key in ~/.claude/settings.json.
+setup:
+  install:
+    - command: |
+        set -e
+        mkdir -p /home/agent/.claude
+        f=/home/agent/.claude/settings.json
+        [ -f "$f" ] || echo '{}' > "$f"
+        # Set only the theme key (any existing one is replaced by design);
+        # the jq merge leaves all other settings untouched. Temp file lives in the
+        # same dir as $f so the mv below is an atomic rename, not a cross-fs copy.
+        tmp=$(mktemp -p /home/agent/.claude)
+        jq '.theme = "auto"' "$f" > "$tmp"
+        mv "$tmp" "$f"
+        chown agent:agent /home/agent/.claude "$f"
+      user: "0"
+      description: Set the theme key in ~/.claude/settings.json to "auto" (jq merge, so all other keys are preserved; any existing theme is replaced by design)
